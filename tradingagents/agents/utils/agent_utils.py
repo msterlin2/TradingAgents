@@ -1,3 +1,5 @@
+from datetime import date
+
 from langchain_core.messages import HumanMessage, RemoveMessage
 
 # Import tools from separate utility files
@@ -42,6 +44,20 @@ def build_instrument_context(ticker: str) -> str:
         "preserving any exchange suffix (e.g. `.TO`, `.L`, `.HK`, `.T`)."
     )
 
+
+def build_trade_date_grounding_instruction(trade_date: str, runtime_date: str | None = None) -> str:
+    """Ground prompts on the requested trade date rather than the system execution date."""
+    requested_date = str(trade_date or "").strip() or "the requested trade date"
+    system_date = str(runtime_date or date.today().isoformat()).strip()
+    return (
+        f"Use {requested_date} as the requested trade date and analysis as-of date. "
+        f"Treat references to today, current date, now, current market, and current price as meaning {requested_date}, "
+        f"not the system execution date {system_date}. "
+        f"Do not state or imply that events after {requested_date} have already occurred. "
+        f"If you mention later catalysts or scenarios, label them explicitly as future events relative to {requested_date}."
+    )
+
+
 def create_msg_delete():
     def delete_messages(state):
         """Clear messages and add placeholder for Anthropic compatibility"""
@@ -56,6 +72,3 @@ def create_msg_delete():
         return {"messages": removal_operations + [placeholder]}
 
     return delete_messages
-
-
-        

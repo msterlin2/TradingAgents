@@ -1,9 +1,10 @@
-from tradingagents.agents.utils.agent_utils import build_instrument_context, get_language_instruction
+from tradingagents.agents.utils.agent_utils import build_instrument_context, build_trade_date_grounding_instruction, get_language_instruction
 
 
 def create_portfolio_manager(llm, memory):
     def portfolio_manager_node(state) -> dict:
-
+        trade_date = state["trade_date"]
+        grounding = build_trade_date_grounding_instruction(trade_date)
         instrument_context = build_instrument_context(state["company_of_interest"])
 
         history = state["risk_debate_state"]["history"]
@@ -26,6 +27,9 @@ def create_portfolio_manager(llm, memory):
 
 {instrument_context}
 
+Requested trade date: {trade_date}
+{grounding}
+
 ---
 
 **Rating Scale** (use exactly one):
@@ -42,7 +46,7 @@ def create_portfolio_manager(llm, memory):
 
 **Required Output Structure:**
 1. **Rating**: State one of Buy / Overweight / Hold / Underweight / Sell.
-2. **Executive Summary**: A concise action plan covering entry strategy, position sizing, key risk levels, and time horizon.
+2. **Executive Summary**: A concise action plan covering entry strategy, position sizing, key risk levels, and time horizon, all anchored to the requested trade date.
 3. **Investment Thesis**: Detailed reasoning anchored in the analysts' debate and past reflections.
 
 ---
@@ -52,7 +56,7 @@ def create_portfolio_manager(llm, memory):
 
 ---
 
-Be decisive and ground every conclusion in specific evidence from the analysts.{get_language_instruction()}"""
+Be decisive and ground every conclusion in specific evidence from the analysts. When referencing timing, catalysts, prices, or the current setup, anchor them to {trade_date}.{get_language_instruction()}"""
 
         response = llm.invoke(prompt)
 
